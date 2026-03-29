@@ -4,6 +4,7 @@ using UnityEngine.InputSystem;
 public class InputHandler : MonoBehaviour
 {
     [SerializeField] private ThirdPersonCamera thirdPersonCamera;
+    [SerializeField] private RocketLauncher rocketLauncher;
 
     private PlayerMotor motor;
     private InputSystem_Actions inputActions;
@@ -17,8 +18,11 @@ public class InputHandler : MonoBehaviour
 
         if (thirdPersonCamera == null)
             thirdPersonCamera = FindAnyObjectByType<ThirdPersonCamera>();
+        if (rocketLauncher == null)
+            rocketLauncher = GetComponentInChildren<RocketLauncher>();
 
         player.Jump.performed += OnJumpPerformed;
+        player.Attack.performed += OnAttackPerformed;
         player.Crouch.performed += OnCrouchPerformed;
         player.Crouch.canceled += OnCrouchCanceled;
     }
@@ -26,6 +30,7 @@ public class InputHandler : MonoBehaviour
     void OnDestroy()
     {
         player.Jump.performed -= OnJumpPerformed;
+        player.Attack.performed -= OnAttackPerformed;
         player.Crouch.performed -= OnCrouchPerformed;
         player.Crouch.canceled -= OnCrouchCanceled;
         inputActions.Dispose();
@@ -43,13 +48,18 @@ public class InputHandler : MonoBehaviour
 
     void Update()
     {
-        if (thirdPersonCamera == null) return;
-
         bool aim = false;
         if (Keyboard.current != null && Keyboard.current.eKey.isPressed)
             aim = true;
         if (Mouse.current != null && Mouse.current.rightButton.isPressed)
             aim = true;
+
+        if (motor != null)
+            motor.SetAiming(aim);
+
+        if (thirdPersonCamera == null)
+            return;
+
         thirdPersonCamera.SetAiming(aim);
 
         Vector2 look = player.Look.ReadValue<Vector2>();
@@ -66,6 +76,13 @@ public class InputHandler : MonoBehaviour
     }
 
     private void OnJumpPerformed(InputAction.CallbackContext _) => motor.Jump();
+
+    private void OnAttackPerformed(InputAction.CallbackContext context)
+    {
+        if (!context.performed || rocketLauncher == null)
+            return;
+        rocketLauncher.TryFire();
+    }
     private void OnCrouchPerformed(InputAction.CallbackContext _) => motor.Crouch();
     private void OnCrouchCanceled(InputAction.CallbackContext _) => motor.Uncrouch();
 }
