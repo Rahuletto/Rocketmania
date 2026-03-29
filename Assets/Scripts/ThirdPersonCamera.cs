@@ -34,6 +34,9 @@ public class ThirdPersonCamera : MonoBehaviour
     [Header("Shake")]
     [SerializeField] private float shakeFrequency = 18f;
 
+    [Header("Recoil")]
+    [SerializeField] private float recoilApplyRate = 7f;
+
     [Header("Refs")]
     [SerializeField] private Camera cam;
     [SerializeField] private bool lockCursorOnPlay;
@@ -51,6 +54,8 @@ public class ThirdPersonCamera : MonoBehaviour
     private float shakeMagnitude;
     private Vector3 shakeOffset;
     private float shakeNoiseSeed;
+    private float recoilPitchPending;
+    private float recoilYawPending;
 
     internal float LookSensitivity
     {
@@ -63,6 +68,18 @@ public class ThirdPersonCamera : MonoBehaviour
         if (cam == null)
             return default;
         return cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+    }
+
+    internal bool IsAiming => aimHeld;
+
+    internal float AimPitchDegrees => pitch;
+
+    internal float AimBlendSmoothed => aimBlend;
+
+    internal void ApplyRecoil(float pitchKick, float yawKick)
+    {
+        recoilPitchPending += pitchKick;
+        recoilYawPending += yawKick;
     }
 
     private void Awake()
@@ -143,6 +160,7 @@ public class ThirdPersonCamera : MonoBehaviour
             return;
 
         UpdateShake();
+        IntegrateRecoil();
 
         float targetBlend = aimHeld ? 1f : 0f;
         aimBlend = Mathf.MoveTowards(aimBlend, targetBlend, Time.deltaTime * aimBlendSpeed);
@@ -174,6 +192,20 @@ public class ThirdPersonCamera : MonoBehaviour
         Vector3 basePos = pivot + orbit * new Vector3(0f, 0f, -currentDistance) + lateral;
         cameraTransform.position = basePos + shakeOffset;
         cameraTransform.rotation = orbit;
+    }
+
+    private void IntegrateRecoil()
+    {
+        float dt = Time.deltaTime;
+        float t = 1f - Mathf.Exp(-recoilApplyRate * dt);
+        float dp = recoilPitchPending * t;
+        float dy = recoilYawPending * t;
+
+        yaw += dy;
+        pitch -= dp;
+        recoilPitchPending -= dp;
+        recoilYawPending -= dy;
+        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
     }
 
     private void UpdateShake()
