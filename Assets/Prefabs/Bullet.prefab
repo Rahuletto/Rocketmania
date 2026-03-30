@@ -153,10 +153,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7e2a1c3940b4df8b51e8c6d4a2b109f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RocketProjectile
-  impactFxPrefab: {fileID: 0}
-  impactSphereRadius: 0.6
-  impactSphereLifetime: 2
+  impactFxPrefab: {fileID: 2870453811009272276, guid: b1093a9449aeb46b092a28e2bbbd9648, type: 3}
+  impactFxScale: 1
+  impactFxDestroyAfterSeconds: 0
+  fallbackBlastRadius: 0.6
+  fallbackBlastCleanupTime: 2
   blastRadius: 6
-  blastImpulse: 16
-  blastUpwardBoost: 0.4
+  blastImpulse: 12
+  blastUpwardBoost: 0.2
+  blastSurfaceNormalWeight: 0.5
   ignoreOwnerInBlast: 0
+  rigidbodyBlastImpulse: 18
+  affectKinematicRigidbodies: 1
+  spawnRadialShockwaveVisual: 1
+  shockwaveVisualDuration: 0.3
+  shockwaveColor: {r: 1, g: 0.55, b: 0.12, a: 1}
+  shockwaveStartAlpha: 0.2
+  shockwaveBloomIntensity: 20
+  shockwaveSpawnLight: 1
+  shockwaveLightReference: {fileID: 8404759651725382685, guid: f889aedc1cd204ee68936d7ab5d64187, type: 3}
+  shockwaveLightIntensityFallback: 1400
