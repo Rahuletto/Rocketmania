@@ -15,6 +15,10 @@ public class ThirdPersonCamera : MonoBehaviour
     [SerializeField] private float aimBlendSpeed = 6f;
     [SerializeField] [Range(0.85f, 1f)] private float aimFovMultiplier = 0.985f;
 
+    [Header("Sprint")]
+    [SerializeField] private float sprintFovAdd = 8f;
+    [SerializeField] private float sprintFovBlendSpeed = 10f;
+
     [Header("Orbit")]
     [SerializeField] private float distance = 4.25f;
     [SerializeField] private float minPitch = -35f;
@@ -56,6 +60,8 @@ public class ThirdPersonCamera : MonoBehaviour
     private float shakeNoiseSeed;
     private float recoilPitchPending;
     private float recoilYawPending;
+    private PlayerMotor targetMotor;
+    private float sprintFovBlend;
 
     internal float LookSensitivity
     {
@@ -75,6 +81,9 @@ public class ThirdPersonCamera : MonoBehaviour
     internal float AimPitchDegrees => pitch;
 
     internal float AimBlendSmoothed => aimBlend;
+
+    /// <summary>Camera used for aim ray / orbit; weapon pitch should tilt around this transform's <see cref="Transform.right"/>.</summary>
+    internal Transform AimCameraTransform => cameraTransform;
 
     internal void ApplyRecoil(float pitchKick, float yawKick)
     {
@@ -102,6 +111,7 @@ public class ThirdPersonCamera : MonoBehaviour
 
         if (target != null)
         {
+            targetMotor = target.GetComponent<PlayerMotor>();
             yaw = target.eulerAngles.y;
             pitch = 5f;
         }
@@ -169,7 +179,14 @@ public class ThirdPersonCamera : MonoBehaviour
         float effectiveShoulder = Mathf.Lerp(shoulderOffset, aimShoulderOffset, aimBlend);
 
         float aimFov = defaultFieldOfView * aimFovMultiplier;
-        cam.fieldOfView = Mathf.Lerp(defaultFieldOfView, aimFov, aimBlend);
+        float fov = Mathf.Lerp(defaultFieldOfView, aimFov, aimBlend);
+
+        float sprintTarget = targetMotor != null && targetMotor.IsSprintingBoostActive ? 1f : 0f;
+        sprintFovBlend = Mathf.MoveTowards(sprintFovBlend, sprintTarget, Time.deltaTime * sprintFovBlendSpeed);
+        float aimSuppression = 1f - aimBlend;
+        fov += sprintFovAdd * sprintFovBlend * aimSuppression;
+
+        cam.fieldOfView = fov;
 
         Vector3 pivot = target.position + target.TransformVector(pivotOffset);
         Quaternion orbit = Quaternion.Euler(pitch, yaw, 0f);

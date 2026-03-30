@@ -26,6 +26,14 @@ public class RocketProjectile : MonoBehaviour
     [SerializeField] float rigidbodyBlastImpulse = 18f;
     [SerializeField] bool affectKinematicRigidbodies;
 
+    [Header("Cleanup")]
+    [SerializeField] float maxFlightSeconds = 20f;
+
+    [Header("Flight visual")]
+    [SerializeField] Vector3 meshForwardEulerOffset = new Vector3(0f, -90f, 0f);
+    [SerializeField] float corkscrewDegreesPerSecond = 720f;
+    [SerializeField] bool driveOrientationInFlight = true;
+
     [Header("Radial shockwave visual")]
     [SerializeField] bool spawnRadialShockwaveVisual = true;
     [SerializeField] float shockwaveVisualDuration = 0.38f;
@@ -40,6 +48,8 @@ public class RocketProjectile : MonoBehaviour
     Collider col;
     bool hitSomething;
     PlayerMotor ownerMotor;
+    float corkscrewRollAngle;
+    float flightTime;
 
     void Awake()
     {
@@ -64,6 +74,52 @@ public class RocketProjectile : MonoBehaviour
         }
 
         rb.linearVelocity = worldVelocity;
+        rb.angularVelocity = Vector3.zero;
+        flightTime = 0f;
+        corkscrewRollAngle = 0f;
+        if (driveOrientationInFlight)
+        {
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
+            ApplyFlightOrientation(worldVelocity, advanceCorkscrew: false);
+        }
+    }
+
+    void FixedUpdate()
+    {
+        if (!hitSomething && maxFlightSeconds > 0f)
+        {
+            flightTime += Time.fixedDeltaTime;
+            if (flightTime >= maxFlightSeconds)
+            {
+                Destroy(gameObject);
+                return;
+            }
+        }
+
+        if (!driveOrientationInFlight || hitSomething)
+            return;
+
+        ApplyFlightOrientation(rb.linearVelocity, advanceCorkscrew: true);
+    }
+
+    void ApplyFlightOrientation(Vector3 worldVelocity, bool advanceCorkscrew)
+    {
+        if (worldVelocity.sqrMagnitude < 1e-8f)
+            return;
+
+        Vector3 forward = worldVelocity.normalized;
+        Vector3 worldUp = Vector3.up;
+        if (Mathf.Abs(Vector3.Dot(forward, worldUp)) > 0.98f)
+            worldUp = Vector3.forward;
+        Quaternion alignVelocity = Quaternion.LookRotation(forward, worldUp);
+        Quaternion meshFix = Quaternion.Euler(meshForwardEulerOffset);
+
+        if (advanceCorkscrew && corkscrewDegreesPerSecond != 0f)
+            corkscrewRollAngle += corkscrewDegreesPerSecond * Time.fixedDeltaTime;
+
+        Quaternion baseRot = alignVelocity * meshFix;
+        Quaternion rot = Quaternion.AngleAxis(corkscrewRollAngle, forward) * baseRot;
+        rb.MoveRotation(rot);
     }
 
     void OnCollisionEnter(Collision collision)
@@ -73,9 +129,30 @@ public class RocketProjectile : MonoBehaviour
         hitSomething = true;
 
         ContactPoint contact = collision.GetContact(0);
-        Vector3 pos = contact.point;
-        Vector3 normal = contact.normal;
+        ExplodeAt(contact.point, contact.normal);
+    }
 
+    void OnTriggerEnter(Collider other)
+    {
+        if (hitSomething || other == null)
+            return;
+        if (ownerMotor != null)
+        {
+            Transform t = other.transform;
+            if (t == ownerMotor.transform || t.IsChildOf(ownerMotor.transform))
+                return;
+        }
+
+        hitSomething = true;
+        Vector3 pos = other.ClosestPoint(transform.position);
+        Vector3 normal = (transform.position - pos).normalized;
+        if (normal.sqrMagnitude < 1e-6f)
+            normal = Vector3.up;
+        ExplodeAt(pos, normal);
+    }
+
+    void ExplodeAt(Vector3 pos, Vector3 normal)
+    {
         ApplyBlastToPlayers(pos, normal);
         if (rigidbodyBlastImpulse > 0f)
             ApplyBlastToRigidbodies(pos, normal);
@@ -83,7 +160,6 @@ public class RocketProjectile : MonoBehaviour
             SpawnRadialShockwaveVisual(pos);
 
         SpawnImpact(pos, normal);
-
         Destroy(gameObject);
     }
 

@@ -175,6 +175,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ae0747ba389f4183b24ba6638cdf153, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InputHandler
+  inputAsset: {fileID: -944628639613478452, guid: 35845fe01580c41289b024647b1d1c53, type: 3}
   thirdPersonCamera: {fileID: 6200010473726305349}
   rocketLauncher: {fileID: 2347923206779897267}
 --- !u!114 &6200010473726305349
@@ -562,10 +563,6 @@ PrefabInstance:
     - target: {fileID: 8844221133445566778, guid: 6def2e084b8104151bffd9d116ecf1c1, type: 3}
       propertyPath: recoilPitch
       value: 8
-      objectReference: {fileID: 0}
-    - target: {fileID: 8844221133445566778, guid: 6def2e084b8104151bffd9d116ecf1c1, type: 3}
-      propertyPath: fireCooldown
-      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 8844221133445566778, guid: 6def2e084b8104151bffd9d116ecf1c1, type: 3}
       propertyPath: projectileSpeed

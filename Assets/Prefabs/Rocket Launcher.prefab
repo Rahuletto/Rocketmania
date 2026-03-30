@@ -50,7 +50,9 @@ MonoBehaviour:
   muzzle: {fileID: 200382207023759897}
   muzzleClearance: 0.45
   projectileSpeed: 52
-  fireCooldown: 2
+  maxAmmo: 5
+  loadingDuration: 1
+  fullReloadDuration: 6
   maxAimDistance: 400
   aimHitMask:
     serializedVersion: 2

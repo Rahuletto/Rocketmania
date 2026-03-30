@@ -3,17 +3,23 @@ using UnityEngine.InputSystem;
 
 public class InputHandler : MonoBehaviour
 {
+    [SerializeField] private InputActionAsset inputAsset;
     [SerializeField] private ThirdPersonCamera thirdPersonCamera;
     [SerializeField] private RocketLauncher rocketLauncher;
 
     private PlayerMotor motor;
-    private InputSystem_Actions inputActions;
-    private InputSystem_Actions.PlayerActions player;
+    private InputActionMap playerMap;
+    private InputAction moveAction;
+    private InputAction lookAction;
+    private InputAction jumpAction;
+    private InputAction attackAction;
+    private InputAction sprintAction;
+    private InputAction crouchAction;
+
+    public InputAction ReloadAction => playerMap != null ? playerMap.FindAction("Reload") : null;
 
     void Awake()
     {
-        inputActions = new InputSystem_Actions();
-        player = inputActions.Player;
         motor = GetComponent<PlayerMotor>();
 
         if (thirdPersonCamera == null)
@@ -21,29 +27,45 @@ public class InputHandler : MonoBehaviour
         if (rocketLauncher == null)
             rocketLauncher = GetComponentInChildren<RocketLauncher>();
 
-        player.Jump.performed += OnJumpPerformed;
-        player.Attack.performed += OnAttackPerformed;
-        player.Crouch.performed += OnCrouchPerformed;
-        player.Crouch.canceled += OnCrouchCanceled;
+        if (inputAsset == null)
+        {
+            Debug.LogError("InputHandler: Assign the Input Actions asset (e.g. InputSystem_Actions).");
+            return;
+        }
+
+        playerMap = inputAsset.FindActionMap("Player");
+        moveAction = playerMap.FindAction("Move");
+        lookAction = playerMap.FindAction("Look");
+        jumpAction = playerMap.FindAction("Jump");
+        attackAction = playerMap.FindAction("Attack");
+        sprintAction = playerMap.FindAction("Sprint");
+        crouchAction = playerMap.FindAction("Crouch");
+
+        jumpAction.performed += OnJumpPerformed;
+        attackAction.performed += OnAttackPerformed;
+        crouchAction.performed += OnCrouchPerformed;
+        crouchAction.canceled += OnCrouchCanceled;
     }
 
     void OnDestroy()
     {
-        player.Jump.performed -= OnJumpPerformed;
-        player.Attack.performed -= OnAttackPerformed;
-        player.Crouch.performed -= OnCrouchPerformed;
-        player.Crouch.canceled -= OnCrouchCanceled;
-        inputActions.Dispose();
+        if (jumpAction != null)
+        {
+            jumpAction.performed -= OnJumpPerformed;
+            attackAction.performed -= OnAttackPerformed;
+            crouchAction.performed -= OnCrouchPerformed;
+            crouchAction.canceled -= OnCrouchCanceled;
+        }
     }
 
     void OnEnable()
     {
-        player.Enable();
+        playerMap?.Enable();
     }
 
     void OnDisable()
     {
-        player.Disable();
+        playerMap?.Disable();
     }
 
     void Update()
@@ -55,14 +77,17 @@ public class InputHandler : MonoBehaviour
             aim = true;
 
         if (motor != null)
+        {
             motor.SetAiming(aim);
+            motor.SetSprinting(sprintAction != null && sprintAction.IsPressed());
+        }
 
         if (thirdPersonCamera == null)
             return;
 
         thirdPersonCamera.SetAiming(aim);
 
-        Vector2 look = player.Look.ReadValue<Vector2>();
+        Vector2 look = lookAction != null ? lookAction.ReadValue<Vector2>() : default;
         if (look.sqrMagnitude < 1e-6f && Mouse.current != null)
             look = Mouse.current.delta.ReadValue();
 
@@ -71,8 +96,8 @@ public class InputHandler : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (motor != null)
-            motor.Move(player.Move.ReadValue<Vector2>());
+        if (motor != null && moveAction != null)
+            motor.Move(moveAction.ReadValue<Vector2>());
     }
 
     private void OnJumpPerformed(InputAction.CallbackContext _) => motor.Jump();
@@ -83,6 +108,7 @@ public class InputHandler : MonoBehaviour
             return;
         rocketLauncher.TryFire();
     }
+
     private void OnCrouchPerformed(InputAction.CallbackContext _) => motor.Crouch();
     private void OnCrouchCanceled(InputAction.CallbackContext _) => motor.Uncrouch();
 }
